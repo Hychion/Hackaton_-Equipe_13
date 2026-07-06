@@ -1,8 +1,3 @@
-# =============================================================================
-#  Workload VOLONTAIREMENT VULNÉRABLE — la CIBLE de la boucle de remédiation.
-#  C'est CE fichier que l'IA va patcher via Pull Request.
-#  4 familles de failles, chacune détectée par une brique de la chaîne :
-# =============================================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,20 +17,18 @@ spec:
     spec:
       containers:
         - name: web
-          # FAILLE 1 — image ancienne (2021), avec des CVE connues.
-          #            → détectée par Trivy (VulnerabilityReport)
-          #   Image "unprivileged" (écoute sur 8080) : une fois corrigée en
-          #   non-root, le pod tourne réellement (contrairement à nginx:80).
-          image: nginxinc/nginx-unprivileged:1.20.0
+          image: nginxinc/nginx-unprivileged:1.25.4
           ports:
             - containerPort: 8080
           securityContext:
-            # FAILLE 2 — conteneur privilégié = accès quasi-root au nœud.
-            #            → détectée par Trivy (config) ET Kyverno (disallow-privileged)
-            privileged: true
-            # FAILLE 3 — exécution forcée en root (UID 0), malgré l'image unprivileged.
-            #            → détectée par Trivy (config) ET Kyverno
-            runAsUser: 0
-          # FAILLE 4 — aucune limite CPU/mémoire (risque de déni de service).
-          #            → détectée par Kyverno (require-limits)
-          # (bloc resources: volontairement absent)
+            privileged: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
