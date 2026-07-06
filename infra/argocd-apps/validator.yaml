@@ -1,0 +1,22 @@
+# Validateur pré-prod : teste le workload pré-prod + expose des métriques
+# Prometheus (rapport Grafana) + gate de promotion vers la prod.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: validator
+  namespace: argocd
+spec:
+  project: hackathon
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: apps/validator
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: validator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

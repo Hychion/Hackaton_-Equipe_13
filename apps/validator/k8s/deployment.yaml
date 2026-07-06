@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: preprod-validator
+  namespace: validator
+  labels:
+    app: preprod-validator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: preprod-validator
+  template:
+    metadata:
+      labels:
+        app: preprod-validator
+    spec:
+      serviceAccountName: validator
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: validator
+          image: python:3.12-slim
+          command:
+            - sh
+            - -c
+            - pip install --user --quiet -r /app/requirements.txt && python /app/validator.py
+          env:
+            - name: HOME
+              value: /home/app
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PREPROD_NAMESPACE
+              value: preprod
+            - name: WORKLOAD
+              value: vulnerable-web
+            - name: SERVICE_URL
+              value: http://vulnerable-web.preprod.svc:8080/
+            - name: CVE_CRITICAL_MAX
+              value: "20"
+            - name: CHECK_INTERVAL
+              value: "30"
+            # Promotion (gate) : désactivée par défaut ; passer à "true" pour
+            # ouvrir automatiquement la PR pré-prod→prod quand la validation est verte.
+            - name: PROMOTE
+              value: "false"
+            - name: GITHUB_REPO
+              value: Hychion/Hackaton_-Equipe_13
+            - name: PREPROD_PATH
+              value: apps/preprod/workload.yaml
+            - name: PROD_PATH
+              value: apps/vulnerable-app/deployment.yaml
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: chain-credentials
+                  key: github-token
+          ports:
+            - name: metrics
+              containerPort: 9099
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          volumeMounts:
+            - name: code
+              mountPath: /app
+              readOnly: true
+            - name: home
+              mountPath: /home/app
+      volumes:
+        - name: code
+          configMap:
+            name: validator-code
+        - name: home
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: preprod-validator
+  namespace: validator
+  labels:
+    app: preprod-validator
+spec:
+  selector:
+    app: preprod-validator
+  ports:
+    - name: metrics
+      port: 9099
+      targetPort: 9099
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: preprod-validator
+  namespace: validator
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: preprod-validator
+  endpoints:
+    - port: metrics
+      interval: 30s

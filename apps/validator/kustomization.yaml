@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - k8s/rbac-secret.yaml
+  - k8s/deployment.yaml
+configMapGenerator:
+  - name: validator-code
+    namespace: validator
+    files:
+      - validator.py
+      - requirements.txt
+generatorOptions:
+  disableNameSuffixHash: true

@@ -1,0 +1,21 @@
+# Environnement pré-prod (workload à valider avant promotion en prod).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: preprod
+  namespace: argocd
+spec:
+  project: hackathon
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: apps/preprod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: preprod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
