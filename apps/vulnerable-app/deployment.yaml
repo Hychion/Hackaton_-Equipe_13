@@ -15,12 +15,10 @@ spec:
       labels:
         app: vulnerable-web
     spec:
-      # Durcissement : ce workload n'appelle pas l'API K8s → pas de token monté
-      # (un pod compromis n'a plus de jeton de ServiceAccount à voler).
       automountServiceAccountToken: false
       containers:
         - name: web
-          image: nginxinc/nginx-unprivileged:1.25.4
+          image: nginxinc/nginx-unprivileged:1.27.0
           ports:
             - containerPort: 8080
           securityContext:
