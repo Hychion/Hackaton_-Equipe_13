@@ -1,0 +1,87 @@
+# Dashboard Grafana "Validation pré-prod → Promotion" — le rapport du sas de
+# validation qui protège la prod. Métriques exposées par le validateur.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-validation
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  validation.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "graphTooltip": 0,
+      "title": "Validation pré-prod → Promotion",
+      "uid": "hackathon-validation",
+      "tags": ["hackathon", "security", "preprod", "promotion"],
+      "timezone": "browser",
+      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "10s",
+      "schemaVersion": 39,
+      "templating": {
+        "list": [
+          { "name": "datasource", "type": "datasource", "query": "prometheus", "hide": 0, "current": {} }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat", "title": "Sas de validation pré-prod",
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "options": { "colorMode": "background", "graphMode": "none" },
+          "fieldConfig": { "defaults": {
+            "mappings": [ { "type": "value", "options": { "0": { "text": "ROUGE — bloqué", "color": "red" }, "1": { "text": "VERT — validé", "color": "green" } } } ],
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+          } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "expr": "preprod_validation_passed" } ]
+        },
+        {
+          "type": "stat", "title": "Prêt à promouvoir en prod ?",
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "options": { "colorMode": "background", "graphMode": "none" },
+          "fieldConfig": { "defaults": {
+            "mappings": [ { "type": "value", "options": { "0": { "text": "NON", "color": "red" }, "1": { "text": "OUI", "color": "green" } } } ],
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+          } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "expr": "preprod_ready_to_promote" } ]
+        },
+        {
+          "type": "bargauge", "title": "Contrôles (health / smoke / cve / policy)",
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "options": { "orientation": "horizontal", "displayMode": "gradient" },
+          "fieldConfig": { "defaults": {
+            "min": 0, "max": 1,
+            "mappings": [ { "type": "value", "options": { "0": { "text": "FAIL" }, "1": { "text": "OK" } } } ],
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+          } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "legendFormat": "{{check}}", "expr": "preprod_validation_check" } ]
+        },
+        {
+          "type": "timeseries", "title": "Historique de la validation pré-prod",
+          "gridPos": { "h": 8, "w": 16, "x": 0, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "min": 0, "max": 1, "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "fillOpacity": 25 }, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "legendFormat": "validation", "expr": "preprod_validation_passed" } ]
+        },
+        {
+          "type": "stat", "title": "CVE CRITICAL (pré-prod)",
+          "gridPos": { "h": 4, "w": 8, "x": 16, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "expr": "preprod_cve_count{severity=\"critical\"}" } ]
+        },
+        {
+          "type": "stat", "title": "Violations Kyverno (pré-prod)",
+          "gridPos": { "h": 4, "w": 8, "x": 16, "y": 10 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "expr": "preprod_policy_violations" } ]
+        }
+      ]
+    }
