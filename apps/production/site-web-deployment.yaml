@@ -1,4 +1,3 @@
-# Site web (CMS WordPress). Fichier mono-document → patchable par le remediator.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,7 +19,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: web
-          image: wordpress:6.1-apache   # ancien CMS → CVE PHP/Apache
+          image: wordpress:6.4-apache
           ports:
             - containerPort: 80
           resources:
@@ -30,3 +29,8 @@ spec:
             limits:
               cpu: "1"
               memory: 512Mi
+          securityContext:
+            privileged: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
