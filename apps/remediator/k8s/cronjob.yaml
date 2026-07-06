@@ -34,6 +34,8 @@ spec:
               env:
                 - name: HOME
                   value: /home/app
+                - name: PYTHONUNBUFFERED       # logs en direct (démo + debug)
+                  value: "1"
                 - name: OVH_AI_BASE_URL
                   value: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
                 - name: OVH_AI_MODEL

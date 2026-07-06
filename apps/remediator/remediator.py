@@ -133,7 +133,8 @@ YAML:
 
 
 def ask_ai(report_summary, current_manifest):
-    ai = OpenAI(base_url=OVH_AI_BASE_URL, api_key=OVH_AI_TOKEN)
+    ai = OpenAI(base_url=OVH_AI_BASE_URL, api_key=OVH_AI_TOKEN,
+                timeout=180.0, max_retries=2)  # ne pas bloquer indéfiniment
     resp = ai.chat.completions.create(
         model=OVH_AI_MODEL,
         temperature=0.1,  # peu de créativité : on veut du YAML fiable
