@@ -13,6 +13,23 @@ spec:
     targetRevision: 9.1.0
     helm:
       values: |
+        # Règle custom fiable pour la démo (les règles classiques sont en
+        # maturity 'incubating' et non chargées par défaut en Falco 0.44).
+        # Ciblée sur le namespace demo → aucun faux positif (nginx ne lance
+        # jamais id/whoami). Priorité WARNING → passe le seuil du responder.
+        customRules:
+          demo-rules.yaml: |-
+            - rule: Reconnaissance dans le conteneur demo
+              desc: Un binaire de reconnaissance a ete lance dans le workload de demo
+              condition: >
+                spawned_process and container and k8s.ns.name = "demo"
+                and proc.name in (whoami, id, uname, hostname, netstat)
+              output: >
+                Commande de reconnaissance dans un conteneur
+                (command=%proc.cmdline user=%user.name container=%container.name
+                image=%container.image.repository pod=%k8s.pod.name ns=%k8s.ns.name)
+              priority: WARNING
+              tags: [demo, recon, mitre_discovery]
         driver:
           kind: modern_ebpf
         falco:
