@@ -1,0 +1,28 @@
+# Sécurité de la chaîne (chantier D) : secret-store + ClusterSecretStore,
+# ExternalSecret du remediator, NetworkPolicies.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: security
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: infra/security
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 10           # tolère l'attente des CRD ESO au premier passage
+      backoff:
+        duration: 15s
+        maxDuration: 3m
+        factor: 2

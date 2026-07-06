@@ -1,0 +1,40 @@
+# NetworkPolicies pour le remediator (chantier D — Zero Trust).
+# Le remediator détient des credentials (token GitHub, clé IA) : on le confine.
+# Enforcées par Calico (CNI du cluster).
+#
+# 1) Aucune connexion entrante : le remediator n'expose aucun service.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: remediator-deny-ingress
+  namespace: remediator
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  # (pas de règle ingress = tout refusé)
+---
+# 2) Sorties limitées : DNS + HTTPS (API K8s, GitHub, OVH AI Endpoints).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: remediator-egress
+  namespace: remediator
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # résolution DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # HTTPS uniquement (kube-apiserver:443, api.github.com, oai.endpoints…ovh.net)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
