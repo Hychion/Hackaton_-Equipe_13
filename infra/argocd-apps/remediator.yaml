@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
     targetRevision: main
-    path: apps/remediator/k8s
+    path: apps/remediator
   destination:
     server: https://kubernetes.default.svc
     namespace: remediator

@@ -1,0 +1,83 @@
+# CronJob remediator — exécute la boucle toutes les 10 min.
+# Pour la démo : déclencher à la demande avec
+#   kubectl -n remediator create job --from=cronjob/remediator run-demo
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: remediator
+  namespace: remediator
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: remediator
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000            # rend l'emptyDir HOME accessible en écriture
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: remediator
+              image: python:3.12-slim
+              command:
+                - sh
+                - -c
+                - pip install --user --quiet -r /app/requirements.txt && python /app/remediator.py
+              env:
+                - name: HOME
+                  value: /home/app
+                - name: OVH_AI_BASE_URL
+                  value: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
+                - name: OVH_AI_MODEL
+                  value: Qwen3.6-27B
+                - name: GITHUB_REPO
+                  value: Hychion/Hackaton_-Equipe_13
+                - name: MANIFEST_PATH
+                  value: apps/vulnerable-app/deployment.yaml
+                - name: TARGET_NAMESPACE
+                  value: demo
+                - name: GIT_BRANCH
+                  value: main
+                # Secrets projetés par ESO (jamais dans Git)
+                - name: OVH_AI_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: chain-credentials
+                      key: ovh-ai-token
+                - name: GITHUB_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: chain-credentials
+                      key: github-token
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              volumeMounts:
+                - name: code
+                  mountPath: /app
+                  readOnly: true
+                - name: home
+                  mountPath: /home/app
+          volumes:
+            - name: code
+              configMap:
+                name: remediator-code
+            - name: home
+              emptyDir: {}

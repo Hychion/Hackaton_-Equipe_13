@@ -1,0 +1,33 @@
+# Identité du remediator + accès LECTURE SEULE aux rapports Trivy.
+# Il ne peut RIEN modifier dans le cluster : il agit uniquement sur Git (PR).
+# C'est le moindre privilège appliqué à notre propre brique.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: remediator
+  namespace: remediator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: remediator-reader
+rules:
+  - apiGroups: ["aquasecurity.github.io"]
+    resources:
+      - vulnerabilityreports
+      - configauditreports
+      - sbomreports
+    verbs: ["get", "list", "watch"]   # lecture seule, aucun write
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: remediator-reader
+subjects:
+  - kind: ServiceAccount
+    name: remediator
+    namespace: remediator
+roleRef:
+  kind: ClusterRole
+  name: remediator-reader
+  apiGroup: rbac.authorization.k8s.io

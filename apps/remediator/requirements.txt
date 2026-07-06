@@ -1,0 +1,4 @@
+openai>=1.40
+PyGithub>=2.3
+kubernetes>=30.1
+PyYAML>=6.0
