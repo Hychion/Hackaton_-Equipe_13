@@ -1,4 +1,3 @@
-# ERP (runtime Java / Tomcat). Fichier mono-document → patchable par le remediator.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,7 +19,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: erp
-          image: tomcat:9.0.30      # ancien → CVE Java/Tomcat connues
+          image: tomcat:9.0.85
           ports:
             - containerPort: 8080
           resources:
@@ -30,3 +29,8 @@ spec:
             limits:
               cpu: "1"
               memory: 512Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            privileged: false
