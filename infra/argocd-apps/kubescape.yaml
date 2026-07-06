@@ -1,0 +1,47 @@
+# Kubescape — 2e scanner de sécurité (redondance de détection). CNCF, Apache-2.0.
+# Second avis indépendant de Trivy : CVE + config + posture de conformité
+# (frameworks NSA-CISA, MITRE ATT&CK, CIS). On coupe tout le volet runtime/eBPF
+# (node-agent) qui ferait doublon avec Falco et pèserait sur 3 nœuds.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubescape
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://kubescape.github.io/helm-charts/
+    chart: kubescape-operator
+    targetRevision: 1.40.2
+    helm:
+      values: |
+        clusterName: hackathon-equipe-13
+        capabilities:
+          operator: enable
+          # ce qu'on veut : scan config + CVE
+          configurationScan: enable
+          vulnerabilityScan: enable
+          nodeScan: enable
+          nodeSbomGeneration: enable
+          # runtime / eBPF / admission : coupés (Falco + Kyverno couvrent déjà)
+          continuousScan: disable
+          relevancy: disable
+          runtimeObservability: disable
+          runtimeDetection: disable
+          malwareDetection: disable
+          networkPolicyService: disable
+          networkEventsStreaming: disable
+          nodeProfileService: disable
+          admissionController: disable
+          httpDetection: disable
+          seccompProfileService: disable
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubescape
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
