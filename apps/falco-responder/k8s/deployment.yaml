@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: falco-ai-responder
+  namespace: falco-responder
+  labels:
+    app: falco-ai-responder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: falco-ai-responder
+  template:
+    metadata:
+      labels:
+        app: falco-ai-responder
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: responder
+          image: python:3.12-slim
+          command:
+            - sh
+            - -c
+            - pip install --user --quiet -r /app/requirements.txt && python /app/responder.py
+          env:
+            - name: HOME
+              value: /home/app
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: OVH_AI_BASE_URL
+              value: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
+            - name: FALCO_AI_MODEL
+              value: gpt-oss-120b
+            - name: GITHUB_REPO
+              value: Hychion/Hackaton_-Equipe_13
+            - name: MIN_PRIORITY
+              value: warning
+            - name: OVH_AI_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: chain-credentials
+                  key: ovh-ai-token
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: chain-credentials
+                  key: github-token
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: code
+              mountPath: /app
+              readOnly: true
+            - name: home
+              mountPath: /home/app
+      volumes:
+        - name: code
+          configMap:
+            name: falco-responder-code
+        - name: home
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: falco-ai-responder
+  namespace: falco-responder
+spec:
+  selector:
+    app: falco-ai-responder
+  ports:
+    - port: 8080
+      targetPort: 8080

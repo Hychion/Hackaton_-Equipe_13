@@ -23,6 +23,11 @@ spec:
           enabled: true
           webui:
             enabled: true
+          # (B) Envoie chaque alerte >= warning à notre responder IA.
+          config:
+            webhook:
+              address: "http://falco-ai-responder.falco-responder.svc.cluster.local:8080/"
+              minimumpriority: "warning"
   destination:
     server: https://kubernetes.default.svc
     namespace: falco

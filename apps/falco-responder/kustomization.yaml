@@ -1,0 +1,15 @@
+# Falco AI Responder — code injecté en ConfigMap (pas de registry d'image).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - k8s/namespace-secret.yaml
+  - k8s/deployment.yaml
+  - k8s/networkpolicy.yaml
+configMapGenerator:
+  - name: falco-responder-code
+    namespace: falco-responder
+    files:
+      - responder.py
+      - requirements.txt
+generatorOptions:
+  disableNameSuffixHash: true

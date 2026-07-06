@@ -1,0 +1,27 @@
+# Chantier B — le responder qui relie Falco (runtime) à l'IA + GitHub issues.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falco-responder
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: apps/falco-responder
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: falco-responder
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 15s
+        maxDuration: 3m
+        factor: 2

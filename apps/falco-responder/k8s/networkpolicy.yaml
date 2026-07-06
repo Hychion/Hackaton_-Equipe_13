@@ -1,0 +1,34 @@
+# Zero Trust : le responder n'accepte que falcosidekick en entrée (8080),
+# et ne sort que vers DNS + HTTPS (GitHub, OVH AI).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: falco-responder
+  namespace: falco-responder
+spec:
+  podSelector:
+    matchLabels:
+      app: falco-ai-responder
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: falco
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
