@@ -20,8 +20,15 @@ spec:
           scannerReportTTL: ""            # garder les rapports pour la démo
           configAuditScannerEnabled: true
           vulnerabilityScannerEnabled: true
+          # (C) SBOM CycloneDX → CRD sbomreports : inventaire des composants
+          #     (angle Cyber Resilience Act / supply chain)
+          sbomGenerationEnabled: true
           # Rescan rapide pour une démo réactive
           scanJobsConcurrentLimit: 3
+        # (A) Expose les métriques Prometheus (trivy_image_vulnerabilities…)
+        #     → scrapées par kube-prometheus-stack → courbe de CVE dans Grafana
+        serviceMonitor:
+          enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: trivy-system
