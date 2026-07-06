@@ -28,10 +28,16 @@ spec:
           replicas: 3
           podDisruptionBudget:
             enabled: true
+          serviceMonitor:
+            enabled: true       # métriques Kyverno → Prometheus → Grafana
         backgroundController:
           replicas: 1
+          serviceMonitor:
+            enabled: true
         reportsController:
           replicas: 1
+          serviceMonitor:
+            enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno

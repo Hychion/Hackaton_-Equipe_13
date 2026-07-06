@@ -1,0 +1,19 @@
+# Scrape les métriques Argo CD (installé en manifests bruts, sans ServiceMonitor).
+# Couvre app-controller (argocd_app_info, sync/health), server, repo-server…
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - argocd
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: argocd
+  endpoints:
+    - port: metrics
+      interval: 30s

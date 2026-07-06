@@ -36,9 +36,17 @@ spec:
           json_output: true
           json_include_output_property: true
         # Expose les événements en métriques + sortie stdout pour la démo
+        # Métriques Falco natives → Prometheus
+        metrics:
+          enabled: true
+          service:
+            create: true
         falcosidekick:
           enabled: true
           webui:
+            enabled: true
+          # Métriques falcosidekick (events par priorité, outputs) → Prometheus
+          serviceMonitor:
             enabled: true
           # (B) Envoie chaque alerte >= warning à notre responder IA.
           config:
