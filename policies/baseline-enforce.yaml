@@ -1,0 +1,86 @@
+# Baseline anti-escalade en mode ENFORCE (bloque à l'admission), cluster-wide,
+# avec EXCEPTIONS pour l'infra qui a légitimement besoin d'accès nœud.
+# Cible : empêcher un workload de "remonter dans la machine haute" (le nœud).
+# Complète PSA : couvre aussi les namespaces sans label PSA (default, argocd…).
+#
+# Exceptions infra (accès hôte légitime) : kube-system, falco (eBPF),
+# monitoring (node-exporter), kubescape (node-scan).
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: baseline-disallow-host-namespaces
+spec:
+  background: true
+  rules:
+    - name: host-namespaces
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces: [kube-system, falco, monitoring, kubescape]
+      validate:
+        failureAction: Enforce
+        message: "hostPID / hostIPC / hostNetwork interdits (vecteur d'évasion vers le nœud)."
+        pattern:
+          spec:
+            =(hostPID): "false"
+            =(hostIPC): "false"
+            =(hostNetwork): "false"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: baseline-disallow-host-path
+spec:
+  background: true
+  rules:
+    - name: host-path
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces: [kube-system, falco, monitoring, kubescape]
+      validate:
+        failureAction: Enforce
+        message: "Les volumes hostPath sont interdits (accès au système de fichiers du nœud)."
+        pattern:
+          spec:
+            =(volumes):
+              - X(hostPath): "null"
+---
+# Privileged en Enforce partout SAUF demo (le workload vulnérable de démo doit
+# pouvoir tourner privilégié pour alimenter la boucle de remédiation) et l'infra.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: baseline-disallow-privileged
+spec:
+  background: true
+  rules:
+    - name: privileged
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces: [kube-system, falco, monitoring, kubescape, demo]
+      validate:
+        failureAction: Enforce
+        message: "Les conteneurs privilégiés sont interdits (hors sandbox demo)."
+        pattern:
+          spec:
+            =(initContainers):
+              - =(securityContext):
+                  =(privileged): "false"
+            containers:
+              - =(securityContext):
+                  =(privileged): "false"
