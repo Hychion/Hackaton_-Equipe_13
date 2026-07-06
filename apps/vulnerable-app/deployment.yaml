@@ -1,0 +1,39 @@
+# =============================================================================
+#  Workload VOLONTAIREMENT VULNÉRABLE — la CIBLE de la boucle de remédiation.
+#  C'est CE fichier que l'IA va patcher via Pull Request.
+#  4 familles de failles, chacune détectée par une brique de la chaîne :
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulnerable-web
+  namespace: demo
+  labels:
+    app: vulnerable-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vulnerable-web
+  template:
+    metadata:
+      labels:
+        app: vulnerable-web
+    spec:
+      containers:
+        - name: web
+          # FAILLE 1 — image très ancienne (2018), bourrée de CVE connues.
+          #            → détectée par Trivy (VulnerabilityReport)
+          image: nginx:1.14
+          ports:
+            - containerPort: 80
+          securityContext:
+            # FAILLE 2 — conteneur privilégié = accès quasi-root au nœud.
+            #            → détectée par Trivy (config) ET Kyverno (disallow-privileged)
+            privileged: true
+            # FAILLE 3 — exécution en root (UID 0).
+            #            → détectée par Trivy (config) ET Kyverno
+            runAsUser: 0
+          # FAILLE 4 — aucune limite CPU/mémoire (risque de déni de service).
+          #            → détectée par Kyverno (require-limits)
+          # (bloc resources: volontairement absent)
