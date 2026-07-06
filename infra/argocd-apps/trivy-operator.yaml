@@ -17,7 +17,11 @@ spec:
           # Scanner en mode standalone, ignore les images non résolues
           ignoreUnfixed: true
         operator:
-          scannerReportTTL: ""            # garder les rapports pour la démo
+          # SCAN PLANIFIÉ (indépendant de tout déploiement/pipeline) : au bout de
+          # ce délai le rapport expire → trivy-operator RE-SCANNE automatiquement.
+          # Capte les CVE nouvellement publiées sur des images inchangées.
+          # X = 7 jours (168h). Ajustable : "24h" (quotidien), "72h"…
+          scannerReportTTL: "168h"
           configAuditScannerEnabled: true
           vulnerabilityScannerEnabled: true
           # (A-bis) Métrique détaillée PAR CVE (trivy_vulnerability_id) pour le

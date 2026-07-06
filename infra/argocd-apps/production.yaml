@@ -1,0 +1,21 @@
+# Applications de production surveillées par la chaîne (ERP + site web).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: production
+  namespace: argocd
+spec:
+  project: hackathon
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: apps/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

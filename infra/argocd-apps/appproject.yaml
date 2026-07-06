@@ -50,6 +50,8 @@ spec:
       namespace: preprod
     - server: https://kubernetes.default.svc
       namespace: validator
+    - server: https://kubernetes.default.svc
+      namespace: production
   # Les briques installent CRD/RBAC/CRs variés → on autorise les types largement
   # (la restriction de valeur porte sur les dépôts et destinations ci-dessus).
   clusterResourceWhitelist:
