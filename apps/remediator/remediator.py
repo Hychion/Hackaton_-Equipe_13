@@ -125,6 +125,10 @@ Ta mission : produire le manifeste YAML CORRIGÉ qui :
 - ajoute des requests ET limits CPU/mémoire raisonnables ;
 - garde un Deployment VALIDE et minimal : mêmes name, namespace, labels, selector.
 
+Corrige UNIQUEMENT ces points. N'ajoute PAS readOnlyRootFilesystem ni d'autres
+contraintes de durcissement qui pourraient empêcher le conteneur de démarrer
+(le manifeste doit rester directement déployable et sain).
+
 Réponds STRICTEMENT dans ce format, sans texte autour :
 EXPLICATION:
 <3 à 6 lignes en français expliquant chaque correction>
