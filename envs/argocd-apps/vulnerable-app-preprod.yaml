@@ -1,0 +1,24 @@
+# PRÉ-PROD — le sas de validation. Le remediator patche envs/preprod/ EN PREMIER ;
+# le correctif est testé ici avant toute promotion vers la prod.
+# Destination = cluster nommé "preprod" (à enregistrer dans Argo CD :
+#   argocd cluster add <context-preprod> --name preprod --label env=preprod)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vulnerable-app-preprod
+  namespace: argocd
+spec:
+  project: hackathon
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: envs/preprod/vulnerable-app
+  destination:
+    name: preprod          # cluster pré-prod (résolu par nom une fois enregistré)
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,39 @@
+# PROD MIROIR — un ApplicationSet déploie envs/prod/ sur TOUS les clusters
+# taggés env=prod. Un seul cluster prod aujourd'hui ; ajouter un miroir =
+# enregistrer un 2e cluster avec le label env=prod, et il devient identique
+# par construction (GitOps). Pattern actif/passif recommandé.
+#
+# Enregistrement d'un cluster prod :
+#   argocd cluster add <context> --name prod-1 --label env=prod
+#   argocd cluster add <context> --name prod-2 --label env=prod   # le miroir
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vulnerable-app-prod
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            env: prod
+  template:
+    metadata:
+      name: 'vulnerable-app-{{.name}}'
+    spec:
+      project: hackathon
+      source:
+        repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+        targetRevision: main
+        path: envs/prod/vulnerable-app
+      destination:
+        server: '{{.server}}'
+        namespace: demo
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
