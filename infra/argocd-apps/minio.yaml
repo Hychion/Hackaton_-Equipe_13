@@ -1,0 +1,21 @@
+# MinIO — cible S3 des backups Velero.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  namespace: argocd
+spec:
+  project: hackathon
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: apps/backup
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: backup-store
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

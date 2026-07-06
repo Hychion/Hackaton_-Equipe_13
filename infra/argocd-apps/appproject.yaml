@@ -52,6 +52,10 @@ spec:
       namespace: validator
     - server: https://kubernetes.default.svc
       namespace: production
+    - server: https://kubernetes.default.svc
+      namespace: backup-store
+    - server: https://kubernetes.default.svc
+      namespace: velero
   # Les briques installent CRD/RBAC/CRs variés → on autorise les types largement
   # (la restriction de valeur porte sur les dépôts et destinations ci-dessus).
   clusterResourceWhitelist:

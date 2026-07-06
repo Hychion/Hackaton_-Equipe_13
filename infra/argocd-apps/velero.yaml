@@ -1,0 +1,54 @@
+# Velero (CNCF) — sauvegarde/restauration des ressources K8s + PV vers S3 (MinIO).
+# Sauvegarde ce que Git ne couvre pas (état runtime, PV, données). Complète le
+# PRA GitOps. Endpoint S3 swappable vers OVH Object Storage / MinIO externe.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+spec:
+  project: hackathon
+  source:
+    repoURL: https://vmware-tanzu.github.io/helm-charts
+    chart: velero
+    targetRevision: 12.1.0
+    helm:
+      values: |
+        # Plugin S3 (AWS-compatible) chargé au démarrage
+        initContainers:
+          - name: velero-plugin-for-aws
+            image: velero/velero-plugin-for-aws:v1.12.1
+            imagePullPolicy: IfNotPresent
+            volumeMounts:
+              - mountPath: /target
+                name: plugins
+        credentials:
+          useSecret: true
+          existingSecret: cloud-credentials   # créé hors Git (bootstrap-backup.sh)
+        configuration:
+          # Backup de PV par copie fichier (kopia) → pas besoin de CSI snapshots
+          uploaderType: kopia
+          backupStorageLocation:
+            - name: default
+              provider: aws
+              bucket: velero
+              config:
+                region: minio
+                s3ForcePathStyle: "true"
+                s3Url: http://minio.backup-store.svc:9000
+          volumeSnapshotLocation: []
+        snapshotsEnabled: false
+        deployNodeAgent: true        # agent kopia sur chaque nœud (backup PV)
+        resources:
+          requests: { cpu: 100m, memory: 256Mi }
+          limits: { cpu: "1", memory: 512Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
