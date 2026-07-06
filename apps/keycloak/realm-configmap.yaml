@@ -1,0 +1,101 @@
+# Realm Keycloak importé au démarrage (--import-realm). Définit :
+# - le realm "hackathon"
+# - 2 clients OIDC : argocd, grafana (confidentiels)
+# - 2 groupes : argocd-admins, grafana-admins (mappés vers les rôles admin)
+# - 1 utilisateur démo membre des deux groupes
+# NB : secrets de client = valeurs DÉMO (en prod → gérés par ESO).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  namespace: keycloak
+data:
+  hackathon-realm.json: |
+    {
+      "realm": "hackathon",
+      "enabled": true,
+      "loginTheme": "keycloak",
+      "groups": [
+        { "name": "argocd-admins" },
+        { "name": "grafana-admins" }
+      ],
+      "users": [
+        {
+          "username": "demo",
+          "enabled": true,
+          "emailVerified": true,
+          "email": "demo@hackathon.local",
+          "firstName": "Demo",
+          "lastName": "User",
+          "credentials": [ { "type": "password", "value": "demo", "temporary": false } ],
+          "groups": [ "/argocd-admins", "/grafana-admins" ]
+        }
+      ],
+      "clients": [
+        {
+          "clientId": "argocd",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "secret": "argocd-oidc-demo-secret",
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": true,
+          "redirectUris": [
+            "http://localhost:8080/auth/callback",
+            "https://localhost:8080/auth/callback",
+            "http://localhost:8080/applications"
+          ],
+          "webOrigins": [ "*" ],
+          "defaultClientScopes": [ "openid", "email", "profile", "groups" ],
+          "protocolMappers": [
+            {
+              "name": "groups",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-group-membership-mapper",
+              "config": {
+                "full.path": "false",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "claim.name": "groups",
+                "userinfo.token.claim": "true"
+              }
+            }
+          ]
+        },
+        {
+          "clientId": "grafana",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "secret": "grafana-oidc-demo-secret",
+          "standardFlowEnabled": true,
+          "redirectUris": [
+            "http://localhost:3000/login/generic_oauth",
+            "https://localhost:3000/login/generic_oauth"
+          ],
+          "webOrigins": [ "*" ],
+          "defaultClientScopes": [ "openid", "email", "profile", "groups" ],
+          "protocolMappers": [
+            {
+              "name": "groups",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-group-membership-mapper",
+              "config": {
+                "full.path": "false",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "claim.name": "groups",
+                "userinfo.token.claim": "true"
+              }
+            }
+          ]
+        }
+      ],
+      "clientScopes": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+        }
+      ]
+    }
