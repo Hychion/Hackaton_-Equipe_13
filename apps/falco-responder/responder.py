@@ -59,7 +59,6 @@ def analyze_and_report(event: dict):
     with _lock:
         if rule in _seen:
             return
-        _seen.add(rule)
 
     output = event.get("output", "")
     fields = event.get("output_fields", {})
@@ -86,6 +85,8 @@ def analyze_and_report(event: dict):
     try:
         issue = repo.create_issue(
             title=f"[Falco] {rule}", body=body, labels=["falco", "incident-runtime"])
+        with _lock:
+            _seen.add(rule)   # marquer traité seulement après succès (retry sinon)
         print(f"issue créée : {issue.html_url}", flush=True)
     except Exception as exc:  # noqa: BLE001
         print(f"ERREUR création issue : {exc}", flush=True)
