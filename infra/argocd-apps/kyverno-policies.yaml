@@ -5,7 +5,7 @@ metadata:
   name: kyverno-policies
   namespace: argocd
 spec:
-  project: default
+  project: hackathon
   source:
     repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
     targetRevision: main

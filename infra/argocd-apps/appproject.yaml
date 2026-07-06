@@ -1,0 +1,56 @@
+# AppProject 'hackathon' — réduit le blast radius d'Argo CD.
+# Le controller Argo est cluster-admin de fait ; on ne peut pas lui retirer ses
+# droits K8s (le GitOps l'exige), mais on borne CE QUE les Applications peuvent
+# déclarer : uniquement nos dépôts approuvés, uniquement nos namespaces.
+# Un attaquant qui modifierait une Application ne pourrait ni pointer un dépôt
+# malveillant, ni déployer dans un namespace arbitraire.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: hackathon
+  namespace: argocd
+spec:
+  description: Chaîne d'audit & remédiation GitOps — équipe 13
+  # Dépôts autorisés (supply chain : pas de source non approuvée)
+  sourceRepos:
+    - https://github.com/Hychion/Hackaton_-Equipe_13.git
+    - https://aquasecurity.github.io/helm-charts/
+    - https://falcosecurity.github.io/charts
+    - https://kyverno.github.io/kyverno/
+    - https://prometheus-community.github.io/helm-charts
+    - https://charts.external-secrets.io
+    - https://kubescape.github.io/helm-charts/
+  # Destinations autorisées : notre cluster, nos namespaces uniquement
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+    - server: https://kubernetes.default.svc
+      namespace: trivy-system
+    - server: https://kubernetes.default.svc
+      namespace: falco
+    - server: https://kubernetes.default.svc
+      namespace: falco-responder
+    - server: https://kubernetes.default.svc
+      namespace: kyverno
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
+    - server: https://kubernetes.default.svc
+      namespace: kubescape
+    - server: https://kubernetes.default.svc
+      namespace: external-secrets
+    - server: https://kubernetes.default.svc
+      namespace: secret-store
+    - server: https://kubernetes.default.svc
+      namespace: remediator
+    - server: https://kubernetes.default.svc
+      namespace: demo
+    - server: https://kubernetes.default.svc
+      namespace: default
+  # Les briques installent CRD/RBAC/CRs variés → on autorise les types largement
+  # (la restriction de valeur porte sur les dépôts et destinations ci-dessus).
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

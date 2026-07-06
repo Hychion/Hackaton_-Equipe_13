@@ -7,7 +7,7 @@ metadata:
   namespace: argocd
 kind: Application
 spec:
-  project: default
+  project: hackathon
   source:
     repoURL: https://kyverno.github.io/kyverno/
     chart: kyverno

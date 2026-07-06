@@ -8,7 +8,7 @@ metadata:
   name: kubescape
   namespace: argocd
 spec:
-  project: default
+  project: hackathon
   source:
     repoURL: https://kubescape.github.io/helm-charts/
     chart: kubescape-operator

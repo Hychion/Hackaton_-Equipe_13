@@ -6,7 +6,7 @@ metadata:
   name: trivy-operator
   namespace: argocd
 spec:
-  project: default
+  project: hackathon
   source:
     repoURL: https://aquasecurity.github.io/helm-charts/
     chart: trivy-operator

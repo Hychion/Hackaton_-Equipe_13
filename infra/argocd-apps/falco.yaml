@@ -6,7 +6,7 @@ metadata:
   name: falco
   namespace: argocd
 spec:
-  project: default
+  project: hackathon
   source:
     repoURL: https://falcosecurity.github.io/charts
     chart: falco
