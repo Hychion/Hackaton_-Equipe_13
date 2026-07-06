@@ -1,0 +1,34 @@
+# Falco — détection de menaces au runtime (syscalls). Graduated CNCF.
+# Utilise le driver modern-bpf (pas de module kernel à compiler).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falco
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://falcosecurity.github.io/charts
+    chart: falco
+    targetRevision: 9.1.0
+    helm:
+      values: |
+        driver:
+          kind: modern_ebpf
+        falco:
+          json_output: true
+          json_include_output_property: true
+        # Expose les événements en métriques + sortie stdout pour la démo
+        falcosidekick:
+          enabled: true
+          webui:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: falco
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

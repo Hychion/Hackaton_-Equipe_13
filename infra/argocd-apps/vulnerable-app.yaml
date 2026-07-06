@@ -1,0 +1,22 @@
+# Workload volontairement vulnérable — la CIBLE de la boucle de remédiation.
+# C'est ce manifeste que l'IA va patcher via PR.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vulnerable-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: apps/vulnerable-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

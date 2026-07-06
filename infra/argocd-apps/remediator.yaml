@@ -1,0 +1,21 @@
+# Le remediator IA (notre code) — déployé lui aussi en GitOps.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: remediator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: apps/remediator/k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: remediator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
