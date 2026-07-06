@@ -20,6 +20,10 @@ spec:
           scannerReportTTL: ""            # garder les rapports pour la démo
           configAuditScannerEnabled: true
           vulnerabilityScannerEnabled: true
+          # (A-bis) Métrique détaillée PAR CVE (trivy_vulnerability_id) pour le
+          #         tableau Grafana listant chaque CVE (id, sévérité, package…).
+          #         Cardinalité + élevée mais acceptable sur ce cluster de démo.
+          metricsVulnIdEnabled: true
           # (C) SBOM CycloneDX → CRD sbomreports : inventaire des composants
           #     (angle Cyber Resilience Act / supply chain)
           sbomGenerationEnabled: true
