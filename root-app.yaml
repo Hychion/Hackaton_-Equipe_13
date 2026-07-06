@@ -1,0 +1,26 @@
+# App-of-apps : cette Application unique bootstrap TOUTE la plateforme.
+# Argo CD lit clusters/bootstrap/apps/ et applique chaque Application enfant.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Hychion/Hackaton_-Equipe_13.git
+    targetRevision: main
+    path: infra/argocd-apps
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
