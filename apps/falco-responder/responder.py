@@ -14,7 +14,9 @@ Config (env) :
   GITHUB_TOKEN (via ESO), GITHUB_REPO
   MIN_PRIORITY  (défaut: warning)
 """
+import datetime
 import os
+import re
 import threading
 
 from flask import Flask, request
@@ -82,14 +84,29 @@ def analyze_and_report(event: dict):
             f"```\n{output}\n```\n\n"
             f"## Analyse IA (OVH AI Endpoints — {AI_MODEL})\n\n{analysis}\n\n"
             f"---\n*Issue générée automatiquement par le falco-responder.*")
+    # 1) On tente l'issue GitHub (rendu le plus propre)
     try:
         issue = repo.create_issue(
             title=f"[Falco] {rule}", body=body, labels=["falco", "incident-runtime"])
         with _lock:
-            _seen.add(rule)   # marquer traité seulement après succès (retry sinon)
+            _seen.add(rule)   # marquer traité seulement après succès
         print(f"issue créée : {issue.html_url}", flush=True)
+        return
     except Exception as exc:  # noqa: BLE001
-        print(f"ERREUR création issue : {exc}", flush=True)
+        print(f"issue indisponible ({exc}) -> fallback commit d'incident", flush=True)
+
+    # 2) Fallback résilient : commit d'un fichier d'incident (permission Contents)
+    try:
+        ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        slug = re.sub(r"[^a-z0-9]+", "-", rule.lower()).strip("-")[:50]
+        path = f"incidents/{ts}-{slug}.md"
+        repo.create_file(path, f"incident(falco): {rule}",
+                         f"# [Falco] {rule}\n\n{body}", branch="main")
+        with _lock:
+            _seen.add(rule)
+        print(f"incident commité : {path}", flush=True)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERREUR fallback commit : {exc}", flush=True)
 
 
 @app.post("/")
