@@ -1,0 +1,19 @@
+# --- Secrets & accès (JAMAIS commit) ---
+secrets/
+*kubeconfig*
+*.key
+*-key.txt
+.env
+.env.*
+*.pem
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- divers ---
+*.tgz
+helm.tgz
+.DS_Store
