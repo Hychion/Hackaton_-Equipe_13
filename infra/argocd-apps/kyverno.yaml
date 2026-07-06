@@ -14,6 +14,13 @@ spec:
     targetRevision: 3.8.1
     helm:
       values: |
+        # Les CRD Kyverno sont volumineuses (>1 Mo). L'apply client-side d'Argo
+        # ajoute un last-applied-configuration qui dépasse la limite d'annotation
+        # (256 Ko). On annote donc chaque CRD pour qu'Argo utilise `kubectl replace`
+        # (create/replace sans last-applied) → fix reproductible depuis Git.
+        crds:
+          annotations:
+            argocd.argoproj.io/sync-options: Replace=true
         admissionController:
           replicas: 1
         backgroundController:
