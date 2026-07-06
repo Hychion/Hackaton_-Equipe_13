@@ -1,0 +1,14 @@
+# Namespace demo — Pod Security Admission en mode WARN/AUDIT (pas enforce).
+# Pourquoi pas enforce : ce namespace doit pouvoir accueillir le workload
+# VOLONTAIREMENT vulnérable (privileged/root) pour la démo. En warn, PSA
+# SIGNALE les écarts au standard "restricted" sans bloquer → couche de
+# détection native, complémentaire de Trivy/Kyverno.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+  labels:
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
