@@ -22,16 +22,18 @@ spec:
     spec:
       containers:
         - name: web
-          # FAILLE 1 — image très ancienne (2018), bourrée de CVE connues.
+          # FAILLE 1 — image ancienne (2021), avec des CVE connues.
           #            → détectée par Trivy (VulnerabilityReport)
-          image: nginx:1.14
+          #   Image "unprivileged" (écoute sur 8080) : une fois corrigée en
+          #   non-root, le pod tourne réellement (contrairement à nginx:80).
+          image: nginxinc/nginx-unprivileged:1.20.0
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           securityContext:
             # FAILLE 2 — conteneur privilégié = accès quasi-root au nœud.
             #            → détectée par Trivy (config) ET Kyverno (disallow-privileged)
             privileged: true
-            # FAILLE 3 — exécution en root (UID 0).
+            # FAILLE 3 — exécution forcée en root (UID 0), malgré l'image unprivileged.
             #            → détectée par Trivy (config) ET Kyverno
             runAsUser: 0
           # FAILLE 4 — aucune limite CPU/mémoire (risque de déni de service).

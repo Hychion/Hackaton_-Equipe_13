@@ -116,10 +116,12 @@ On te donne (1) un résumé de vulnérabilités et mauvaises configurations dét
 par Trivy, et (2) le manifeste YAML actuel du workload concerné.
 
 Ta mission : produire le manifeste YAML CORRIGÉ qui :
-- met à jour l'image vers une version récente et maintenue corrigeant les CVE ;
+- met à jour l'image vers une version récente et maintenue corrigeant les CVE.
+  IMPORTANT : conserve le MÊME dépôt d'image (ne change QUE le tag) ;
 - supprime privileged (le retire ou le met à false) ;
 - fait tourner le conteneur en utilisateur NON-root (runAsNonRoot: true,
-  runAsUser >= 1000, allowPrivilegeEscalation: false) ;
+  runAsUser >= 1000, allowPrivilegeEscalation: false). Ne change PAS le
+  containerPort existant (il est déjà > 1024, compatible non-root) ;
 - ajoute des requests ET limits CPU/mémoire raisonnables ;
 - garde un Deployment VALIDE et minimal : mêmes name, namespace, labels, selector.
 
