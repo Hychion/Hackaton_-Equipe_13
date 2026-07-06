@@ -21,8 +21,13 @@ spec:
         crds:
           annotations:
             argocd.argoproj.io/sync-options: Replace=true
+        # HA : le webhook d'admission est le SPOF le plus critique (s'il tombe,
+        # plus aucun déploiement ne passe). 3 replicas + PDB + anti-affinité
+        # (activée par défaut → 1 pod/nœud) → survit à la perte d'un nœud.
         admissionController:
-          replicas: 1
+          replicas: 3
+          podDisruptionBudget:
+            enabled: true
         backgroundController:
           replicas: 1
         reportsController:
