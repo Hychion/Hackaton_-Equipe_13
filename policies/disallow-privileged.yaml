@@ -1,0 +1,26 @@
+# Interdit les conteneurs privilégiés (accès quasi-root au nœud).
+# Mode Audit : signale sans bloquer (sinon on bloquerait notre propre app de démo).
+# Ferme la boucle : après correction, empêche la RÉCIDIVE de cette classe de faille.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged
+spec:
+  background: true
+  rules:
+    - name: no-privileged-containers
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - demo
+      validate:
+        failureAction: Audit
+        message: "Les conteneurs privilégiés sont interdits."
+        pattern:
+          spec:
+            containers:
+              - =(securityContext):
+                  =(privileged): "false"

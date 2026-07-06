@@ -1,0 +1,24 @@
+# Interdit le tag :latest (image non reproductible → on ne sait pas ce qui tourne).
+# Mode Audit.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - demo
+      validate:
+        failureAction: Audit
+        message: "Le tag :latest est interdit — figez une version d'image."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"

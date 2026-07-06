@@ -1,0 +1,27 @@
+# Exige des limites CPU et mémoire sur chaque conteneur (anti-DoS / bon voisinage).
+# Mode Audit.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-limits
+spec:
+  background: true
+  rules:
+    - name: require-cpu-memory-limits
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - demo
+      validate:
+        failureAction: Audit
+        message: "Chaque conteneur doit déclarer des limits CPU et mémoire."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"
