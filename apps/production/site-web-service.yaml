@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: site-web
+  namespace: production
+spec:
+  selector:
+    app: site-web
+  ports:
+    - port: 80
+      targetPort: 80

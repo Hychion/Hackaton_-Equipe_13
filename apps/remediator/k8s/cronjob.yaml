@@ -42,12 +42,12 @@ spec:
                   value: Qwen3.6-27B
                 - name: GITHUB_REPO
                   value: Hychion/Hackaton_-Equipe_13
-                - name: MANIFEST_PATH
-                  value: apps/vulnerable-app/deployment.yaml
-                - name: TARGET_NAMESPACE
-                  value: demo
                 - name: GIT_BRANCH
                   value: main
+                # Multi-cibles : le remediator boucle sur toutes ces applications
+                # (une branche/PR par workload).
+                - name: TARGETS
+                  value: '[{"namespace":"demo","workload":"vulnerable-web","manifest_path":"apps/vulnerable-app/deployment.yaml"},{"namespace":"production","workload":"erp","manifest_path":"apps/production/erp-deployment.yaml"},{"namespace":"production","workload":"site-web","manifest_path":"apps/production/site-web-deployment.yaml"}]'
                 # Secrets projetés par ESO (jamais dans Git)
                 - name: OVH_AI_TOKEN
                   valueFrom:

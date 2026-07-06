@@ -1,0 +1,32 @@
+# Site web (CMS WordPress). Fichier mono-document → patchable par le remediator.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: site-web
+  namespace: production
+  labels:
+    app: site-web
+    tier: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: site-web
+  template:
+    metadata:
+      labels:
+        app: site-web
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: web
+          image: wordpress:6.1-apache   # ancien CMS → CVE PHP/Apache
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
