@@ -1,0 +1,188 @@
+# Garage (Deuxfleurs, AGPL-3.0) — cible S3 des sauvegardes Velero.
+# Remplace MinIO : S3-compatible (API AWS), 100% open source, self-hosted,
+# pensé pour le stockage distribué géo-réparti. Velero garde son
+# velero-plugin-for-aws et pointe simplement sur l'endpoint Garage.
+# En prod : cluster Garage multi-nœuds (replication_factor 3) sur disques
+# dédiés + PV persistants ; ici démo mono-nœud éphémère.
+# Secrets (rpc_secret, admin token, clé S3) via garage-creds (hors Git,
+# scripts/bootstrap-backup.sh). Repo : github.com/deuxfleurs-org/garage
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backup-store
+  labels:
+    pod-security.kubernetes.io/warn: baseline
+---
+# Configuration Garage (sans secrets — rpc_secret/admin token via env GARAGE_*).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: garage-config
+  namespace: backup-store
+data:
+  garage.toml: |
+    metadata_dir = "/var/lib/garage/meta"
+    data_dir = "/var/lib/garage/data"
+    db_engine = "lmdb"
+
+    replication_factor = 1
+
+    rpc_bind_addr = "[::]:3901"
+    rpc_public_addr = "garage.backup-store.svc.cluster.local:3901"
+
+    [s3_api]
+    s3_region = "garage"
+    api_bind_addr = "[::]:3900"
+    root_domain = ".s3.garage.local"
+
+    [admin]
+    api_bind_addr = "[::]:3903"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: garage
+  namespace: backup-store
+  labels:
+    app: garage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: garage
+  template:
+    metadata:
+      labels:
+        app: garage
+    spec:
+      containers:
+        - name: garage
+          image: dxflrs/garage:v1.0.1
+          command: ["/garage"]     # image scratch : pas d'entrypoint implicite
+          args: ["server"]
+          env:
+            # rpc_secret (32o hex) et token admin injectés hors du ConfigMap.
+            - name: GARAGE_RPC_SECRET
+              valueFrom: { secretKeyRef: { name: garage-creds, key: rpc_secret } }
+            - name: GARAGE_ADMIN_TOKEN
+              valueFrom: { secretKeyRef: { name: garage-creds, key: admin_token } }
+          ports:
+            - { name: s3, containerPort: 3900 }
+            - { name: rpc, containerPort: 3901 }
+            - { name: admin, containerPort: 3903 }
+          readinessProbe:
+            tcpSocket: { port: 3900 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          volumeMounts:
+            - { name: config, mountPath: /etc/garage.toml, subPath: garage.toml, readOnly: true }
+            - { name: data, mountPath: /var/lib/garage }
+      volumes:
+        - name: config
+          configMap:
+            name: garage-config
+        - name: data
+          emptyDir: {}          # démo : éphémère. Prod = PV par nœud.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: garage
+  namespace: backup-store
+  labels:
+    app: garage
+spec:
+  selector:
+    app: garage
+  ports:
+    - { name: s3, port: 3900, targetPort: 3900 }
+    - { name: rpc, port: 3901, targetPort: 3901 }
+    - { name: admin, port: 3903, targetPort: 3903 }
+---
+# RBAC minimal pour le job d'init : exécuter le binaire garage DANS le pod
+# serveur (l'image scratch n'a pas de shell → on pilote via `kubectl exec`).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: garage-init
+  namespace: backup-store
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: garage-init
+  namespace: backup-store
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create, get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: garage-init
+  namespace: backup-store
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: garage-init
+subjects:
+  - kind: ServiceAccount
+    name: garage-init
+    namespace: backup-store
+---
+# Bootstrap mono-nœud : layout de stockage + bucket 'velero' + clé S3 (import
+# d'une clé fixe = credentials prévisibles, partagés avec le secret Velero).
+# Le pod serveur possède déjà /etc/garage.toml + GARAGE_RPC_SECRET → le CLI y
+# tourne sans shell ni config à recopier.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: garage-init
+  namespace: backup-store
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: garage-init
+      containers:
+        - name: init
+          image: alpine/kubectl:latest     # alpine (shell) + kubectl ; Bitnami déprécié
+          env:
+            - name: S3_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: garage-creds, key: s3_access_key } }
+            - name: S3_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: garage-creds, key: s3_secret_key } }
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              NS=backup-store
+              echo "[init] attente du pod garage (Running)..."
+              until kubectl -n $NS get pod -l app=garage -o jsonpath='{.items[0].status.phase}' 2>/dev/null | grep -q Running; do sleep 3; done
+              POD=$(kubectl -n $NS get pod -l app=garage -o jsonpath='{.items[0].metadata.name}')
+              G="kubectl -n $NS exec $POD -- /garage"
+              echo "[init] attente du node Garage (RPC)..."
+              until $G status >/dev/null 2>&1; do sleep 3; done
+              # ID du node (1re colonne hex de la table 'status')
+              NODE=$($G status | awk '$1 ~ /^[0-9a-f]{16,}$/ {print $1; exit}')
+              echo "[init] node=$NODE"
+              $G layout assign -z dc1 -c 1G "$NODE" || echo "[init] layout déjà assigné"
+              $G layout apply --version 1 || echo "[init] layout déjà appliqué"
+              sleep 2
+              $G key import --yes -n velero "$S3_ACCESS_KEY" "$S3_SECRET_KEY" || echo "[init] clé déjà importée"
+              $G bucket create velero || echo "[init] bucket déjà là"
+              $G bucket allow --read --write --owner velero --key velero || true
+              echo "[init] === état final ==="
+              $G bucket list
+              $G key list
+              echo "[init] Garage prêt : bucket 'velero' + clé 'velero'"

@@ -1,6 +1,7 @@
-# Velero (CNCF) — sauvegarde/restauration des ressources K8s + PV vers S3 (MinIO).
+# Velero (CNCF) — sauvegarde/restauration des ressources K8s + PV vers S3 (Garage).
 # Sauvegarde ce que Git ne couvre pas (état runtime, PV, données). Complète le
-# PRA GitOps. Endpoint S3 swappable vers OVH Object Storage / MinIO externe.
+# PRA GitOps. Endpoint S3 swappable (Garage in-cluster / cluster Garage externe /
+# tout S3-compatible) — juste l'URL à changer, zéro vendor lock-in.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -28,14 +29,31 @@ spec:
         configuration:
           # Backup de PV par copie fichier (kopia) → pas besoin de CSI snapshots
           uploaderType: kopia
+          # 2 cibles : OVH Object Storage (off-site souverain, primaire démo) +
+          # Garage in-cluster (S3 open source local / air-gap). Même API S3,
+          # credentials distincts par BSL. OVH = clés hors Git (ovh-credentials).
           backupStorageLocation:
-            - name: default
+            - name: ovh
+              provider: aws
+              bucket: velero-equipe13
+              default: true
+              credential:
+                name: ovh-credentials
+                key: cloud
+              config:
+                region: gra
+                s3Url: https://s3.gra.cloud.ovh.net
+                s3ForcePathStyle: "true"
+            - name: garage
               provider: aws
               bucket: velero
+              credential:
+                name: cloud-credentials
+                key: cloud
               config:
-                region: minio
+                region: garage
+                s3Url: http://garage.backup-store.svc.cluster.local:3900
                 s3ForcePathStyle: "true"
-                s3Url: http://minio.backup-store.svc:9000
           volumeSnapshotLocation: []
         snapshotsEnabled: false
         deployNodeAgent: true        # agent kopia sur chaque nœud (backup PV)
