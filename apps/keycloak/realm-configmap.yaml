@@ -52,9 +52,9 @@ data:
           "standardFlowEnabled": true,
           "directAccessGrantsEnabled": true,
           "redirectUris": [
-            "http://localhost:8080/auth/callback",
-            "https://localhost:8080/auth/callback",
-            "http://localhost:8080/applications"
+            "https://localhost:8080/*", "http://localhost:8080/*",
+            "https://localhost:8081/*", "http://localhost:8081/*",
+            "https://localhost:8083/*", "http://localhost:8083/*"
           ],
           "webOrigins": [ "*" ],
           "protocolMappers": [
@@ -80,8 +80,8 @@ data:
           "secret": "grafana-oidc-demo-secret",
           "standardFlowEnabled": true,
           "redirectUris": [
-            "http://localhost:3000/login/generic_oauth",
-            "https://localhost:3000/login/generic_oauth"
+            "https://localhost:3000/*", "http://localhost:3000/*",
+            "https://localhost:3001/*", "http://localhost:3001/*"
           ],
           "webOrigins": [ "*" ],
           "protocolMappers": [
