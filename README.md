@@ -218,9 +218,18 @@ kubectl get svc keycloak -n keycloak -o jsonpath='{.status.loadBalancer.ingress[
 
 ### Connexion SSO (OIDC via Keycloak)
 Sur la page de login **Argo CD** (« LOG IN VIA KEYCLOAK ») ou **Grafana**
-(« Sign in with Keycloak ») → identifiants **`demo` / `demo`** (admin sur les deux).
-Accès direct (sans SSO) : Argo `admin` / *(secret `argocd-initial-admin-secret`)*,
-Grafana `admin / hackathon-ovh`, console admin Keycloak `admin` / *(secret `keycloak-admin`)*.
+(« Sign in with Keycloak »). Comptes **par rôle** (segregation of duties) :
+
+| Compte | mot de passe | Argo CD | Grafana |
+|---|---|---|---|
+| `appweb` | `appweb` | **Admin** (déploiement) | Viewer |
+| `monitoring` | `monitoring` | Read-only | **Admin** (observabilité) |
+| `demo` | `demo` | Admin | Admin (super-admin de secours) |
+
+RBAC : le groupe Keycloak `argocd-admins` → admin Argo ; `grafana-admins` → admin
+Grafana ; sinon lecture seule / Viewer. Accès direct hors SSO : Argo `admin`
+*(secret `argocd-initial-admin-secret`)*, Grafana `admin / hackathon-ovh`,
+console Keycloak `admin` *(secret `keycloak-admin`)*.
 
 ### ⚠️ Pièges à connaître
 - **Toujours `https://`** (le `S`) : Argo, Grafana **et** Keycloak servent en TLS
