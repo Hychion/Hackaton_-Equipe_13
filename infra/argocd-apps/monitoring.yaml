@@ -35,7 +35,7 @@ spec:
             GF_AUTH_GENERIC_OAUTH_NAME: "Keycloak"
             GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "grafana"
             GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "grafana-oidc-demo-secret"
-            GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile groups"
+            GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile"
             GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://51.210.2.211/realms/hackathon/protocol/openid-connect/auth"
             GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://51.210.2.211/realms/hackathon/protocol/openid-connect/token"
             GF_AUTH_GENERIC_OAUTH_API_URL: "https://51.210.2.211/realms/hackathon/protocol/openid-connect/userinfo"
