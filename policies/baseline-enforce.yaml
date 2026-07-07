@@ -4,7 +4,8 @@
 # Complète PSA : couvre aussi les namespaces sans label PSA (default, argocd…).
 #
 # Exceptions infra (accès hôte légitime) : kube-system, falco (eBPF),
-# monitoring (node-exporter), kubescape (node-scan).
+# monitoring (node-exporter), kubescape (node-scan), velero (node-agent kopia
+# lit les volumes des pods sur /var/lib/kubelet → hostPath + privileged requis).
 ---
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
@@ -21,7 +22,7 @@ spec:
       exclude:
         any:
           - resources:
-              namespaces: [kube-system, falco, monitoring, kubescape]
+              namespaces: [kube-system, falco, monitoring, kubescape, velero]
       validate:
         failureAction: Enforce
         message: "hostPID / hostIPC / hostNetwork interdits (vecteur d'évasion vers le nœud)."
@@ -46,7 +47,7 @@ spec:
       exclude:
         any:
           - resources:
-              namespaces: [kube-system, falco, monitoring, kubescape]
+              namespaces: [kube-system, falco, monitoring, kubescape, velero]
       validate:
         failureAction: Enforce
         message: "Les volumes hostPath sont interdits (accès au système de fichiers du nœud)."
@@ -72,7 +73,7 @@ spec:
       exclude:
         any:
           - resources:
-              namespaces: [kube-system, falco, monitoring, kubescape, demo]
+              namespaces: [kube-system, falco, monitoring, kubescape, velero, demo]
       validate:
         failureAction: Enforce
         message: "Les conteneurs privilégiés sont interdits (hors sandbox demo)."
