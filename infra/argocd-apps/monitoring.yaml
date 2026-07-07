@@ -27,6 +27,21 @@ spec:
               protocol: https
               cert_file: /etc/grafana-tls/tls.crt
               cert_key: /etc/grafana-tls/tls.key
+              root_url: https://localhost:3000/
+            # SSO OIDC via Keycloak (realm hackathon, client grafana).
+            # Le groupe grafana-admins → rôle Admin (JMESPath sur le claim groups).
+            auth.generic_oauth:
+              enabled: true
+              name: Keycloak
+              client_id: grafana
+              client_secret: grafana-oidc-demo-secret
+              scopes: "openid email profile groups"
+              auth_url: http://51.210.2.211/realms/hackathon/protocol/openid-connect/auth
+              token_url: http://51.210.2.211/realms/hackathon/protocol/openid-connect/token
+              api_url: http://51.210.2.211/realms/hackathon/protocol/openid-connect/userinfo
+              role_attribute_path: "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'"
+              allow_sign_up: true
+              use_pkce: true
           extraSecretMounts:
             - name: grafana-tls
               secretName: grafana-tls
