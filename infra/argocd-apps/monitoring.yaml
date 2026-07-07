@@ -15,6 +15,11 @@ spec:
     helm:
       values: |
         grafana:
+          # Grafana 13.x (unified storage) casse la création d'utilisateur OAuth
+          # ("unable to create user: user not found"). On épingle une version 11.x
+          # stable où le SSO generic_oauth fonctionne de façon fiable.
+          image:
+            tag: "11.6.3"
           adminPassword: hackathon-ovh
           service:
             type: LoadBalancer
