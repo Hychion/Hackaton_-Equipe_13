@@ -33,8 +33,12 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # HTTPS uniquement (kube-apiserver:443, api.github.com, oai.endpoints…ovh.net)
+    # HTTPS sortant : api.github.com, oai.endpoints…ovh.net (443) + kube-apiserver
+    # OVH Managed K8s exposé sur 6443 (le CNI filtre la destination réelle
+    # post-DNAT du service kubernetes.default 10.x.0.1:443 → :6443).
     - to: []
       ports:
         - protocol: TCP
           port: 443
+        - protocol: TCP
+          port: 6443

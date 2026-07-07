@@ -1,0 +1,20 @@
+# Scrape les métriques Velero (port http-monitoring:8085) → Prometheus.
+# Alimente le dashboard "Sauvegardes". Le chart Velero n'installe pas de
+# ServiceMonitor par défaut, on l'ajoute ici.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: velero
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - velero
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: velero
+  endpoints:
+    - port: http-monitoring
+      interval: 30s

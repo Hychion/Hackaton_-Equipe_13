@@ -57,6 +57,18 @@ spec:
           volumeSnapshotLocation: []
         snapshotsEnabled: false
         deployNodeAgent: true        # agent kopia sur chaque nœud (backup PV)
+        # Backup planifié (automatisation PRA) : demo + production toutes les 6h
+        # vers l'off-site OVH, rétention 7 j. Alimente le dashboard "Sauvegardes".
+        schedules:
+          demo-prod-6h:
+            disabled: false
+            schedule: "0 */6 * * *"
+            template:
+              ttl: "168h"
+              storageLocation: ovh
+              includedNamespaces:
+                - demo
+                - production
         resources:
           requests: { cpu: 100m, memory: 256Mi }
           limits: { cpu: "1", memory: 512Mi }
