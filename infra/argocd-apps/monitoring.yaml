@@ -28,20 +28,20 @@ spec:
               cert_file: /etc/grafana-tls/tls.crt
               cert_key: /etc/grafana-tls/tls.key
               root_url: https://localhost:3000/
-            # SSO OIDC via Keycloak (realm hackathon, client grafana).
-            # Le groupe grafana-admins → rôle Admin (JMESPath sur le claim groups).
-            auth.generic_oauth:
-              enabled: true
-              name: Keycloak
-              client_id: grafana
-              client_secret: grafana-oidc-demo-secret
-              scopes: "openid email profile groups"
-              auth_url: http://51.210.2.211/realms/hackathon/protocol/openid-connect/auth
-              token_url: http://51.210.2.211/realms/hackathon/protocol/openid-connect/token
-              api_url: http://51.210.2.211/realms/hackathon/protocol/openid-connect/userinfo
-              role_attribute_path: "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'"
-              allow_sign_up: true
-              use_pkce: true
+          # SSO OIDC via Keycloak passé en variables d'env (le chart interdit les
+          # secrets dans grafana.ini). Groupe grafana-admins → rôle Admin.
+          env:
+            GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+            GF_AUTH_GENERIC_OAUTH_NAME: "Keycloak"
+            GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "grafana"
+            GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "grafana-oidc-demo-secret"
+            GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile groups"
+            GF_AUTH_GENERIC_OAUTH_AUTH_URL: "http://51.210.2.211/realms/hackathon/protocol/openid-connect/auth"
+            GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "http://51.210.2.211/realms/hackathon/protocol/openid-connect/token"
+            GF_AUTH_GENERIC_OAUTH_API_URL: "http://51.210.2.211/realms/hackathon/protocol/openid-connect/userinfo"
+            GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'"
+            GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+            GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
           extraSecretMounts:
             - name: grafana-tls
               secretName: grafana-tls
