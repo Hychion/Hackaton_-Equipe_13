@@ -125,6 +125,48 @@ data:
           "targets": [
             { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "legendFormat": "durée totale", "expr": "sum(velero_backup_duration_seconds_sum)" }
           ]
+        },
+        {
+          "type": "table", "title": "Contenu des buckets de sauvegarde (état réel du S3)",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "targets": [
+            { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "format": "table", "instant": true, "expr": "s3_backups_count" },
+            { "refId": "B", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "format": "table", "instant": true, "expr": "s3_backup_objects" },
+            { "refId": "C", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "format": "table", "instant": true, "expr": "s3_backup_bytes" },
+            { "refId": "D", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "format": "table", "instant": true, "expr": "s3_backup_target_up" }
+          ],
+          "transformations": [
+            { "id": "merge", "options": {} },
+            { "id": "organize", "options": {
+                "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true, "container": true, "endpoint": true, "namespace": true, "pod": true, "service": true, "prometheus": true },
+                "indexByName": { "target": 0, "bucket": 1, "Value #A": 2, "Value #B": 3, "Value #C": 4, "Value #D": 5 },
+                "renameByName": { "target": "Cible", "bucket": "Bucket", "Value #A": "Sauvegardes", "Value #B": "Objets", "Value #C": "Taille", "Value #D": "Joignable" }
+            } }
+          ],
+          "fieldConfig": { "defaults": { "custom": { "align": "auto" } }, "overrides": [
+            { "matcher": { "id": "byName", "options": "Taille" }, "properties": [ { "id": "unit", "value": "bytes" } ] },
+            { "matcher": { "id": "byName", "options": "Joignable" }, "properties": [
+              { "id": "mappings", "value": [ { "type": "value", "options": { "0": { "text": "NON", "color": "red" }, "1": { "text": "OUI", "color": "green" } } } ] },
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } }
+            ] }
+          ] }
+        },
+        {
+          "type": "bargauge", "title": "Sauvegardes stockées par cible",
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "options": { "orientation": "horizontal", "displayMode": "gradient", "showUnfilled": true },
+          "fieldConfig": { "defaults": { "min": 0, "color": { "mode": "continuous-GrYlRd" } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "legendFormat": "{{target}}", "expr": "s3_backups_count" } ]
+        },
+        {
+          "type": "bargauge", "title": "Volume stocké par cible",
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "options": { "orientation": "horizontal", "displayMode": "gradient", "showUnfilled": true },
+          "fieldConfig": { "defaults": { "min": 0, "unit": "bytes", "color": { "mode": "continuous-BlPu" } } },
+          "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" }, "legendFormat": "{{target}}", "expr": "s3_backup_bytes" } ]
         }
       ]
     }

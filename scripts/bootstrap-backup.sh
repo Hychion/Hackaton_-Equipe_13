@@ -49,3 +49,26 @@ aws_secret_access_key=$OVH_S3_SECRET_KEY" \
 else
   echo "ℹ️  ovh-credentials non créé : exporte OVH_S3_ACCESS_KEY / OVH_S3_SECRET_KEY pour la cible off-site OVH."
 fi
+
+# --- Exporter "état des backups dans le S3" (ns monitoring) -------------------
+# Endpoints + clés des 2 buckets pour lister leur contenu et exposer des métriques.
+kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+EXP_ARGS=(
+  --from-literal=GARAGE_S3_ENDPOINT="http://garage.backup-store.svc.cluster.local:3900"
+  --from-literal=GARAGE_S3_ACCESS="$S3_ACCESS"
+  --from-literal=GARAGE_S3_SECRET="$S3_SECRET"
+  --from-literal=GARAGE_BUCKET="velero"
+  --from-literal=GARAGE_REGION="garage"
+)
+if [ -n "${OVH_S3_ACCESS_KEY:-}" ] && [ -n "${OVH_S3_SECRET_KEY:-}" ]; then
+  EXP_ARGS+=(
+    --from-literal=OVH_S3_ENDPOINT="${OVH_S3_ENDPOINT:-https://s3.gra.cloud.ovh.net}"
+    --from-literal=OVH_S3_ACCESS="$OVH_S3_ACCESS_KEY"
+    --from-literal=OVH_S3_SECRET="$OVH_S3_SECRET_KEY"
+    --from-literal=OVH_BUCKET="${OVH_BUCKET:-velero-equipe13}"
+    --from-literal=OVH_REGION="${OVH_REGION:-gra}"
+  )
+fi
+kubectl -n monitoring create secret generic s3-exporter-creds "${EXP_ARGS[@]}" \
+  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+echo "OK — secret s3-exporter-creds (monitoring) en place (état backups S3)."

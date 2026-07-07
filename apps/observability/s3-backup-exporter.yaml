@@ -1,0 +1,168 @@
+# Exporter Prometheus "état des backups DANS le S3" : liste les buckets Velero
+# sur les 2 cibles (Garage in-cluster + OVH off-site) et expose objets / taille /
+# nb de sauvegardes / fraîcheur. Complète les métriques Velero (côté serveur) par
+# la réalité côté stockage. Pattern : python:3.12-slim + code en ConfigMap.
+# Credentials des 2 S3 via le secret s3-exporter-creds (hors Git, bootstrap-backup.sh).
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s3-backup-exporter-code
+  namespace: monitoring
+data:
+  requirements.txt: |
+    boto3==1.35.99
+    prometheus_client==0.21.1
+  exporter.py: |
+    import os, time
+    import boto3
+    from botocore.config import Config
+    from prometheus_client import start_http_server, Gauge
+
+    OBJ  = Gauge("s3_backup_objects", "Objets de backup dans le bucket S3", ["target", "bucket"])
+    SIZE = Gauge("s3_backup_bytes", "Taille cumulée des backups dans le bucket S3", ["target", "bucket"])
+    NB   = Gauge("s3_backups_count", "Sauvegardes Velero distinctes (prefixes backups/)", ["target", "bucket"])
+    LAST = Gauge("s3_backup_last_object_timestamp", "Timestamp du dernier objet ecrit", ["target", "bucket"])
+    UP   = Gauge("s3_backup_target_up", "1 si le bucket S3 repond", ["target", "bucket"])
+
+    def targets():
+        t = []
+        if os.environ.get("GARAGE_S3_ENDPOINT"):
+            t.append(dict(name="garage", endpoint=os.environ["GARAGE_S3_ENDPOINT"],
+                          ak=os.environ["GARAGE_S3_ACCESS"], sk=os.environ["GARAGE_S3_SECRET"],
+                          bucket=os.environ.get("GARAGE_BUCKET", "velero"),
+                          region=os.environ.get("GARAGE_REGION", "garage")))
+        if os.environ.get("OVH_S3_ENDPOINT"):
+            t.append(dict(name="ovh", endpoint=os.environ["OVH_S3_ENDPOINT"],
+                          ak=os.environ["OVH_S3_ACCESS"], sk=os.environ["OVH_S3_SECRET"],
+                          bucket=os.environ.get("OVH_BUCKET", "velero-equipe13"),
+                          region=os.environ.get("OVH_REGION", "gra")))
+        return t
+
+    def scan(t):
+        s3 = boto3.client("s3", endpoint_url=t["endpoint"], aws_access_key_id=t["ak"],
+                          aws_secret_access_key=t["sk"], region_name=t["region"],
+                          config=Config(s3={"addressing_style": "path"},
+                                        retries={"max_attempts": 2},
+                                        connect_timeout=5, read_timeout=15))
+        count = 0; total = 0; last = 0.0; backups = set()
+        for page in s3.get_paginator("list_objects_v2").paginate(Bucket=t["bucket"]):
+            for o in page.get("Contents", []):
+                count += 1; total += o["Size"]
+                last = max(last, o["LastModified"].timestamp())
+                k = o["Key"]
+                if k.startswith("backups/") and "/" in k[8:]:
+                    backups.add(k.split("/")[1])
+        lbl = (t["name"], t["bucket"])
+        OBJ.labels(*lbl).set(count)
+        SIZE.labels(*lbl).set(total)
+        NB.labels(*lbl).set(len(backups))
+        if last:
+            LAST.labels(*lbl).set(last)
+        UP.labels(*lbl).set(1)
+
+    def main():
+        port = int(os.environ.get("PORT", "9101"))
+        interval = int(os.environ.get("INTERVAL", "60"))
+        start_http_server(port)
+        print(f"s3-backup-exporter :{port} (intervalle {interval}s)", flush=True)
+        while True:
+            for t in targets():
+                try:
+                    scan(t)
+                    print(f"[{t['name']}] OK bucket={t['bucket']}", flush=True)
+                except Exception as e:
+                    UP.labels(t["name"], t["bucket"]).set(0)
+                    print(f"[{t['name']}] ERREUR: {e}", flush=True)
+            time.sleep(interval)
+
+    if __name__ == "__main__":
+        main()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s3-backup-exporter
+  namespace: monitoring
+  labels:
+    app: s3-backup-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: s3-backup-exporter
+  template:
+    metadata:
+      labels:
+        app: s3-backup-exporter
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: exporter
+          image: python:3.12-slim
+          command:
+            - sh
+            - -c
+            - pip install --user --quiet -r /app/requirements.txt && python /app/exporter.py
+          env:
+            - name: HOME
+              value: /home/app
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          envFrom:
+            - secretRef:
+                name: s3-exporter-creds   # endpoints + clés des 2 S3 (hors Git)
+          ports:
+            - name: metrics
+              containerPort: 9101
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 300m, memory: 256Mi }
+          volumeMounts:
+            - { name: code, mountPath: /app, readOnly: true }
+            - { name: home, mountPath: /home/app }
+      volumes:
+        - name: code
+          configMap:
+            name: s3-backup-exporter-code
+        - name: home
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s3-backup-exporter
+  namespace: monitoring
+  labels:
+    app: s3-backup-exporter
+spec:
+  selector:
+    app: s3-backup-exporter
+  ports:
+    - name: metrics
+      port: 9101
+      targetPort: 9101
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: s3-backup-exporter
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: s3-backup-exporter
+  endpoints:
+    - port: metrics
+      interval: 30s
