@@ -35,6 +35,9 @@ spec:
               valueFrom: { secretKeyRef: { name: keycloak-admin, key: password } }
             - name: KC_HTTP_ENABLED
               value: "true"
+            # Hostname fixe = URLs cohérentes (corrige les consoles admin/account)
+            - name: KC_HOSTNAME
+              value: https://51.210.2.211
             - name: KC_HOSTNAME_STRICT
               value: "false"
             - name: KC_HEALTH_ENABLED
