@@ -168,7 +168,50 @@ bash scripts/bootstrap-secrets.sh && bash scripts/bootstrap-backup.sh
 kubectl apply -f root-app.yaml
 ```
 
-Interfaces : `kubectl port-forward svc/argocd-server -n argocd 8080:443` · `svc/monitoring-grafana -n monitoring 3000:80`.
+---
+
+## 🔌 Accès aux interfaces (port-forward + SSO)
+
+Argo CD et Grafana n'ont **pas d'IP publique** → on y accède via un tunnel
+`kubectl port-forward` (local). **Keycloak**, lui, est en **LoadBalancer public**
+(pas de tunnel : il doit être joignable par le navigateur *et* par les services).
+
+> ⚠️ **`port-forward` = commande bloquante** : un tunnel par terminal. Pour Argo
+> **et** Grafana, ouvre **deux terminaux** (Keycloak n'en a pas besoin).
+
+| Service | Commande (terminal dédié) | URL navigateur |
+|---|---|---|
+| **Argo CD** | `kubectl port-forward svc/argocd-server -n argocd 8080:443` | **https://localhost:8080** |
+| **Grafana** | `kubectl port-forward svc/monitoring-grafana -n monitoring 3000:443` | **https://localhost:3000** |
+| **Keycloak** | *(aucune — LoadBalancer public)* | **https://\<IP-LB-keycloak\>/** |
+
+```bash
+export KUBECONFIG=$PWD/secrets/kubeconfig-equipe-13.yaml
+# IP publique de Keycloak :
+kubectl get svc keycloak -n keycloak -o jsonpath='{.status.loadBalancer.ingress[0].ip}'; echo
+```
+
+### Connexion SSO (OIDC via Keycloak)
+Sur la page de login **Argo CD** (« LOG IN VIA KEYCLOAK ») ou **Grafana**
+(« Sign in with Keycloak ») → identifiants **`demo` / `demo`** (admin sur les deux).
+Accès direct (sans SSO) : Argo `admin` / *(secret `argocd-initial-admin-secret`)*,
+Grafana `admin / hackathon-ovh`, console admin Keycloak `admin` / *(secret `keycloak-admin`)*.
+
+### ⚠️ Pièges à connaître
+- **Toujours `https://`** (le `S`) : Argo, Grafana **et** Keycloak servent en TLS
+  auto-signé → un `http://` renvoie *connection reset*. Accepte l'avertissement de
+  certificat (*Avancé → Continuer*) — 3 fois (une par service).
+- **Ports exacts** : Argo = `8080`, Grafana = `3000`. Les `redirect_uri` OIDC sont
+  fixés dessus → un autre port = *Invalid redirect_uri* côté Keycloak.
+- **`connection reset` / `lost connection to pod`** : le pod redémarrait au moment
+  du tunnel → attends qu'il soit `Running` (`kubectl get pod`) puis relance.
+
+### Accès depuis une autre machine (optionnel)
+`port-forward` n'écoute que sur `127.0.0.1`. Pour l'exposer sur le réseau local :
+```bash
+kubectl port-forward --address 0.0.0.0 svc/argocd-server -n argocd 8080:443
+```
+(puis `https://<IP-de-ta-machine>:8080`). À éviter hors réseau de confiance.
 
 ---
 
