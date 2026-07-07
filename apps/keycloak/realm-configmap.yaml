@@ -22,13 +22,24 @@ data:
       "users": [
         {
           "username": "demo",
-          "enabled": true,
-          "emailVerified": true,
-          "email": "demo@hackathon.local",
-          "firstName": "Demo",
-          "lastName": "User",
+          "enabled": true, "emailVerified": true, "email": "demo@hackathon.local",
+          "firstName": "Demo", "lastName": "SuperAdmin",
           "credentials": [ { "type": "password", "value": "demo", "temporary": false } ],
           "groups": [ "/argocd-admins", "/grafana-admins" ]
+        },
+        {
+          "username": "monitoring",
+          "enabled": true, "emailVerified": true, "email": "monitoring@hackathon.local",
+          "firstName": "Equipe", "lastName": "Monitoring",
+          "credentials": [ { "type": "password", "value": "monitoring", "temporary": false } ],
+          "groups": [ "/grafana-admins" ]
+        },
+        {
+          "username": "appweb",
+          "enabled": true, "emailVerified": true, "email": "appweb@hackathon.local",
+          "firstName": "Equipe", "lastName": "AppWeb",
+          "credentials": [ { "type": "password", "value": "appweb", "temporary": false } ],
+          "groups": [ "/argocd-admins" ]
         }
       ],
       "clients": [
