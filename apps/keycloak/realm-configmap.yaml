@@ -46,7 +46,6 @@ data:
             "http://localhost:8080/applications"
           ],
           "webOrigins": [ "*" ],
-          "defaultClientScopes": [ "openid", "email", "profile", "groups" ],
           "protocolMappers": [
             {
               "name": "groups",
@@ -74,7 +73,6 @@ data:
             "https://localhost:3000/login/generic_oauth"
           ],
           "webOrigins": [ "*" ],
-          "defaultClientScopes": [ "openid", "email", "profile", "groups" ],
           "protocolMappers": [
             {
               "name": "groups",
@@ -89,13 +87,6 @@ data:
               }
             }
           ]
-        }
-      ],
-      "clientScopes": [
-        {
-          "name": "groups",
-          "protocol": "openid-connect",
-          "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
         }
       ]
     }
