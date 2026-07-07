@@ -37,12 +37,16 @@ spec:
               value: "true"
             - name: KC_HOSTNAME_STRICT
               value: "false"
-            - name: KC_PROXY_HEADERS
-              value: "xforwarded"
             - name: KC_HEALTH_ENABLED
               value: "true"
+            # TLS servi directement par Keycloak (cert auto-signé pour l'IP du LB)
+            - name: KC_HTTPS_CERTIFICATE_FILE
+              value: /etc/keycloak-tls/tls.crt
+            - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+              value: /etc/keycloak-tls/tls.key
           ports:
             - { name: http, containerPort: 8080 }
+            - { name: https, containerPort: 8443 }
           readinessProbe:
             httpGet: { path: /realms/hackathon, port: 8080 }
             initialDelaySeconds: 30
@@ -53,10 +57,14 @@ spec:
             limits: { cpu: "1", memory: 1Gi }
           volumeMounts:
             - { name: realm, mountPath: /opt/keycloak/data/import, readOnly: true }
+            - { name: tls, mountPath: /etc/keycloak-tls, readOnly: true }
       volumes:
         - name: realm
           configMap:
             name: keycloak-realm
+        - name: tls
+          secret:
+            secretName: keycloak-tls
 ---
 apiVersion: v1
 kind: Service
@@ -70,6 +78,6 @@ spec:
   selector:
     app: keycloak
   ports:
-    - name: http
-      port: 80
-      targetPort: 8080
+    - name: https
+      port: 443
+      targetPort: 8443
