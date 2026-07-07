@@ -15,7 +15,7 @@ L'IA (OVH AI Endpoints) n'est pas un assistant : c'est un **composant actif** de
 flowchart TB
     git["🗂️ Dépôt GitHub<br/>(source de vérité : manifestes + code)"]
     ai["🧠 OVH AI Endpoints<br/>Qwen3.6-27B · gpt-oss-120b"]
-    s3[("💾 MinIO / OVH Object Storage<br/>backups S3")]
+    s3[("💾 Garage (in-cluster) + OVH Object Storage<br/>backups S3 (off-site)")]
 
     subgraph cluster["☸️ Cluster Managed Kubernetes OVHcloud"]
         direction TB
@@ -87,7 +87,7 @@ flowchart TB
 - **Multi-cluster** (branche `feat/multi-cluster`) : promotion pré-prod→prod + ApplicationSet miroir (prêt à activer).
 
 ### Résilience & secrets
-- **Velero → MinIO / OVH Object Storage** : backup + restore de l'état runtime et des PV (**PRA** prouvé). Endpoint S3 swappable (anti lock-in).
+- **Velero (dual-cible)** : backup + restore de l'état runtime et des PV (**PRA** prouvé) vers **2 BackupStorageLocations** — **OVH Object Storage** (off-site souverain, cible primaire) **+ Garage** (S3 AGPL self-hosted in-cluster, local/air-gap). Même API S3 → endpoint swappable, anti lock-in.
 - **ESO** : token GitHub + clé IA projetés depuis un store, **jamais dans Git**.
 
 ---
@@ -106,7 +106,7 @@ flowchart TB
 | **Secrets exposés dans Git** | **ESO** — secrets hors Git, projetés à la demande |
 | **Menace runtime** (shell, reconnaissance, `/etc/shadow`) | **Falco** (eBPF) → analyse IA → incident tracé |
 | **SPOF** (webhook d'admission) | **HA Kyverno ×3** + PDB + anti-affinité |
-| **Perte de données / du cluster** | **Velero** backup/restore (PRA) → S3 (MinIO / OVH Object Storage) |
+| **Perte de données / du cluster** | **Velero** backup/restore (PRA) → **off-site OVH Object Storage** + **Garage** in-cluster |
 | **Supply chain (images)** | SBOM CycloneDX + 2 scanners *(roadmap : Harbor managé + cosign)* |
 | **Absence de traçabilité** | Métriques Grafana · PolicyReports · PR/issues GitHub horodatées |
 | **Vendor lock-in** | 100 % **CNCF** + K8s standard ; IA & S3 via API standard (swappable) |
@@ -125,6 +125,8 @@ flowchart TB
 | **Prometheus** (+ Grafana) | Observabilité | Graduated | Apache-2.0 (Grafana : AGPL-3.0) |
 | **External Secrets Operator** | Secrets hors Git | Incubating | Apache-2.0 |
 | **Velero** | Sauvegarde / restauration | (Velero) | Apache-2.0 |
+| **Garage** (Deuxfleurs) | Cible S3 backup (local, self-hosted) | — (OSS hors CNCF) | **AGPL-3.0** |
+| **OVH Object Storage** | Cible S3 backup off-site | — (OVHcloud) | service |
 | **OVH AI Endpoints** | Couche IA générative | — (OVHcloud) | service |
 
 ---
@@ -143,7 +145,7 @@ flowchart TB
 │   ├── falco-responder/       # Falco → IA → incident GitHub
 │   ├── validator/             # sas de validation pré-prod (métriques Grafana)
 │   ├── observability/         # dashboards Grafana + ServiceMonitors
-│   └── backup/                # MinIO (cible S3 des backups Velero)
+│   └── backup/                # Garage (cible S3 open source des backups Velero)
 ├── policies/                  # ClusterPolicies Kyverno (Audit + Enforce)
 ├── envs/                      # (branche) multi-cluster : preprod / prod + miroir
 ├── scripts/                   # bootstrap des secrets (hors Git)
@@ -162,7 +164,8 @@ export KUBECONFIG=$PWD/secrets/kubeconfig-equipe-13.yaml
 # 1. Argo CD (seule étape manuelle)
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-# 2. Secrets hors Git (token GitHub, clé IA, MinIO)
+# 2. Secrets hors Git (token GitHub, clé IA, Garage + OVH Object Storage)
+#    off-site OVH : export OVH_S3_ACCESS_KEY=… OVH_S3_SECRET_KEY=… avant le 2e script
 bash scripts/bootstrap-secrets.sh && bash scripts/bootstrap-backup.sh
 # 3. Bootstrap : app racine → déploie toute la plateforme depuis Git
 kubectl apply -f root-app.yaml
