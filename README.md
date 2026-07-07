@@ -176,8 +176,33 @@ Argo CD et Grafana n'ont **pas d'IP publique** → on y accède via un tunnel
 `kubectl port-forward` (local). **Keycloak**, lui, est en **LoadBalancer public**
 (pas de tunnel : il doit être joignable par le navigateur *et* par les services).
 
-> ⚠️ **`port-forward` = commande bloquante** : un tunnel par terminal. Pour Argo
-> **et** Grafana, ouvre **deux terminaux** (Keycloak n'en a pas besoin).
+### C'est quoi `kubectl port-forward` ?
+Ça crée un **tunnel** entre un port de **ta machine** (`localhost:8080`) et un
+service **dans le cluster**. Tant que la commande tourne, ton navigateur peut
+« voir » le service comme s'il était en local. Quand tu fermes la commande, le
+tunnel disparaît.
+
+### Pas à pas (exemple Argo CD)
+1. **Ouvre un terminal.** Pointe kubectl sur le bon cluster :
+   ```bash
+   export KUBECONFIG=~/Desktop/claude_projects/HACKATHON_OVH/secrets/kubeconfig-equipe-13.yaml
+   kubectl get nodes          # doit lister 3 nœuds Ready → tu es bien connecté
+   ```
+2. **Lance le tunnel** (il va « bloquer » le terminal, c'est **normal**) :
+   ```bash
+   kubectl port-forward svc/argocd-server -n argocd 8080:443
+   ```
+   Tu dois voir : `Forwarding from 127.0.0.1:8080 -> 8443` → **laisse ce terminal ouvert.**
+3. **Ouvre ton navigateur** sur **https://localhost:8080** (avec le `S`), accepte
+   l'avertissement de certificat (*Avancé → Continuer*).
+4. **Pour arrêter** le tunnel : reviens dans le terminal et fais **`Ctrl+C`**.
+
+> ⚠️ **Un tunnel = un terminal** (la commande reste au premier plan). Pour ouvrir
+> Argo **et** Grafana en même temps → **deux terminaux** (Keycloak n'en a pas
+> besoin, il est déjà public). Astuce : ajoute `&` à la fin pour le lancer en
+> arrière-plan, mais dans un vrai terminal c'est plus clair de garder 1 fenêtre par tunnel.
+
+### Récap des accès
 
 | Service | Commande (terminal dédié) | URL navigateur |
 |---|---|---|
