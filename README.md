@@ -15,9 +15,9 @@ L'IA (OVH AI Endpoints) n'est pas un assistant : c'est un **composant actif** de
 flowchart TB
     git["🗂️ Dépôt GitHub<br/>(source de vérité : manifestes + code)"]
     ai["🧠 OVH AI Endpoints<br/>Qwen3.6-27B · gpt-oss-120b"]
-    s3[("💾 Garage (in-cluster) + OVH Object Storage<br/>backups S3 (off-site)")]
+    ovhs3[("☁️ OVH Object Storage<br/>backup off-site (S3)")]
 
-    subgraph cluster["☸️ Cluster Managed Kubernetes OVHcloud"]
+    subgraph cluster["☸️ Cluster Managed Kubernetes OVHcloud (3 nœuds)"]
         direction TB
         subgraph wl["Workloads surveillés"]
             demo["demo : vulnerable-web"]
@@ -36,15 +36,20 @@ flowchart TB
             falco["Falco (eBPF)"]
             fresp["falco-responder → IA"]
         end
+        subgraph bkp["🗄️ Sauvegarde (PRA)"]
+            velero["Velero · dual-BSL"]
+            garage[("Garage<br/>S3 in-cluster · AGPL")]
+            s3exp["s3-backup-exporter"]
+        end
         subgraph ob["📊 Observabilité"]
             prom["Prometheus"]
-            graf["Grafana · 3 dashboards"]
+            graf["Grafana · 4 dashboards"]
         end
         argo["🔄 Argo CD<br/>GitOps · app-of-apps · Projects"]
         remed["🤖 Remediator (multi-cibles)"]
         valid["✅ Validateur pré-prod (gate)"]
         eso["🔐 ESO (secrets hors Git)"]
-        velero["🗄️ Velero"]
+        kc["🔑 Keycloak<br/>SSO OIDC"]
     end
 
     wl --> det & prev & falco
@@ -57,10 +62,14 @@ flowchart TB
     pp --> valid --> graf
     valid -->|si VERT : PR promotion| git
     det --> prom --> graf
-    velero -->|backup / restore| s3
-    eso -.->|projette secrets| remed
-    eso -.-> fresp
-    eso -.-> valid
+    velero -->|backup local| garage
+    velero -->|backup off-site| ovhs3
+    garage -.-> s3exp
+    ovhs3 -.-> s3exp
+    s3exp -.->|inventaire buckets| prom
+    kc -->|SSO| argo
+    kc -->|SSO| graf
+    eso -.->|projette secrets| remed & fresp & valid
 ```
 
 ---
